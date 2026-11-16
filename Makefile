@@ -7,15 +7,15 @@ FAN_OBJ = fan_control.o
 %.o: %.c $(DEPS)
 	$(CC) -c -o $@ $< $(CFLAGS)
 
-all: fan_control fan_hook.so
+all: fan_control libfan_hook.so
 
-fan_hook.so: fan_hook.c
+libfan_hook.so: fan_hook.c
 	$(CC) -shared -fPIC -o $@ $< $(CFLAGS) -ldl
 
 fan_control: $(FAN_OBJ)
 	$(CC) -o $@ $^ $(CFLAGS)
 
-goggle_ipk: fan_control fan_hook.so
+goggle_ipk: fan_control libfan_hook.so
 	$(eval PKG_NAME := $(shell cat ./ipk/goggle/control/control | grep Package | cut -d" " -f2))
 	$(eval ARCH := $(shell cat ./ipk/goggle/control/control | grep Architecture | cut -d" " -f2))
 	$(eval VERSION :=$(shell cat ./ipk/goggle/control/control | grep Version | cut -d" " -f2))
@@ -29,7 +29,7 @@ goggle_ipk: fan_control fan_hook.so
 	cp fan_control ipk/goggle/build/data/opt/bin
 	chmod +x ipk/goggle/build/data/opt/bin/fan_control
 	mkdir -p ipk/goggle/build/data/opt/etc/preload.d
-	cp fan_hook.so ipk/goggle/build/data/opt/etc/preload.d/
+	cp libfan_hook.so ipk/goggle/build/data/opt/etc/preload.d/
 	cd ipk/goggle/build/control && tar czvf ../control.tar.gz .
 	cd ipk/goggle/build/data && tar czvf ../data.tar.gz .
 	cd ipk/goggle/build && tar czvf "../../${IPK_NAME}" ./control.tar.gz ./data.tar.gz ./debian-binary
@@ -45,7 +45,7 @@ repo: ipk
 clean:
 	rm -rf fan_control
 	rm -rf *.o
-	rm -rf fan_hook.so
+	rm -rf libfan_hook.so
 	rm -rf repo
 	rm -rf ipk/goggle/build
 	rm -rf ipk/*.ipk
