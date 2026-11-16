@@ -16,28 +16,23 @@
 #define POLARITY "/polarity"
 #define ENABLE "/enable"
 
-// This system is kind of silly
-// But we need to match the DJI one or we will fight with the glasses process while it's running.
-
-// Temperature steps, overlapping to provide some hysteresis protection
-static uint8_t fan_temp[6][2] = {
+// Temperature steps {step down below, step up above} in C, overlapping for hysteresis.
+// Fine steps below 40% keep it quiet; 60%+ only when needed to stay under DJI's 90C warning.
+static uint8_t fan_temp[][2] = {
     {0, 60},
-    {55, 75},
-    {70, 83},
-    {78, 88},
-    {84, 95},
-    {92, 120}
+    {56, 66},
+    {63, 72},
+    {69, 77},
+    {74, 82},
+    {79, 86},
+    {83, 89},
+    {86, 120}
 };
 
 // Fan speeds in %
-static uint8_t fan_speeds[6] = {
-    20,
-    40,
-    60,
-    80,
-    100,
-    100
-};
+static uint8_t fan_speeds[] = { 20, 25, 30, 35, 40, 60, 80, 100 };
+
+#define NUM_STEPS (sizeof(fan_speeds) / sizeof(fan_speeds[0]))
 
 static volatile sig_atomic_t quit = 0;
 
@@ -101,7 +96,7 @@ int main(void) {
     uint8_t fan_speed = 0;
     while(!quit) {
         int32_t temp = get_int_from_fs(CPU_TEMP_PATH);
-        if(temp > fan_temp[fan_speed][1] && fan_speed < 5) {
+        if(temp > fan_temp[fan_speed][1] && fan_speed < NUM_STEPS - 1) {
             fan_speed++;
         }
         if(temp < fan_temp[fan_speed][0] && fan_speed > 0) {
