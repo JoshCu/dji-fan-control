@@ -1,11 +1,12 @@
 // Preloaded into the DJI glasses app by wtfos-modloader.
-// Redirects the app's fan PWM duty_cycle writes to /dev/null so fan_control owns the fan.
+// Blocks the app's fan PWM writes (direct and via test_pwm) so fan_control owns the fan.
 #define _GNU_SOURCE
 #include <dlfcn.h>
 #include <fcntl.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
+#include <unistd.h>
 
 static const char *redirect(const char *path) {
     return (path && strstr(path, "pwm2/duty_cycle")) ? "/dev/null" : path;
@@ -52,4 +53,51 @@ FILE *fopen(const char *path, const char *mode) {
     static FILE *(*real)(const char *, const char *);
     if (!real) real = dlsym(RTLD_NEXT, "fopen");
     return real(redirect(path), mode);
+}
+
+// The app also sets the fan by spawning "/system/bin/test_pwm 2 ...", which runs
+// outside this hook. Skip any test_pwm launch targeting channel 2.
+static int is_fan_cmd(const char *cmd) {
+    const char *p = cmd ? strstr(cmd, "test_pwm") : NULL;
+    if (!p) return 0;
+    p += strlen("test_pwm");
+    while (*p == ' ') p++;
+    return p[0] == '2' && (p[1] == ' ' || p[1] == '\0');
+}
+
+static int is_fan_argv(const char *path, char *const argv[]) {
+    return path && strstr(path, "test_pwm") && argv && argv[1] && strcmp(argv[1], "2") == 0;
+}
+
+int system(const char *cmd) {
+    static int (*real)(const char *);
+    if (!real) real = dlsym(RTLD_NEXT, "system");
+    return is_fan_cmd(cmd) ? 0 : real(cmd);
+}
+
+FILE *popen(const char *cmd, const char *type) {
+    static FILE *(*real)(const char *, const char *);
+    if (!real) real = dlsym(RTLD_NEXT, "popen");
+    return real(is_fan_cmd(cmd) ? "true" : cmd, type);
+}
+
+int execve(const char *path, char *const argv[], char *const envp[]) {
+    static int (*real)(const char *, char *const[], char *const[]);
+    if (!real) real = dlsym(RTLD_NEXT, "execve");
+    if (is_fan_argv(path, argv)) _exit(0);
+    return real(path, argv, envp);
+}
+
+int execv(const char *path, char *const argv[]) {
+    static int (*real)(const char *, char *const[]);
+    if (!real) real = dlsym(RTLD_NEXT, "execv");
+    if (is_fan_argv(path, argv)) _exit(0);
+    return real(path, argv);
+}
+
+int execvp(const char *file, char *const argv[]) {
+    static int (*real)(const char *, char *const[]);
+    if (!real) real = dlsym(RTLD_NEXT, "execvp");
+    if (is_fan_argv(file, argv)) _exit(0);
+    return real(file, argv);
 }
