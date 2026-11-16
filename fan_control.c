@@ -21,19 +21,19 @@
 
 // Temperature steps, overlapping to provide some hysteresis protection
 static uint8_t fan_temp[6][2] = {
-    {0, 50},
-    {40, 70},
-    {65, 80},
-    {77, 90},
-    {85, 98},
-    {98, 120}
+    {0, 60},
+    {55, 75},
+    {70, 83},
+    {78, 88},
+    {84, 95},
+    {92, 120}
 };
 
 // Fan speeds in %
 static uint8_t fan_speeds[6] = {
-    0,
+    20,
+    40,
     60,
-    70,
     80,
     100,
     100
@@ -104,7 +104,7 @@ int main(void) {
         if(temp > fan_temp[fan_speed][1] && fan_speed < 5) {
             fan_speed++;
         }
-        if(temp < fan_temp[fan_speed][0] && fan_speed > 1) {
+        if(temp < fan_temp[fan_speed][0] && fan_speed > 0) {
             fan_speed--;
         }
         uint8_t fan_percent = fan_speeds[fan_speed];
