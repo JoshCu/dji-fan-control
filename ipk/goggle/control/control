@@ -1,5 +1,5 @@
 Package: fan-control
-Version: 0.1.1
+Version: 0.2.0
 Maintainer: bri3d
 Description: Service to control fan on goggles even when dji process is not running
 Architecture: pigeon-glasses
