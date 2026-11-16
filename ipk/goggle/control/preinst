@@ -1,2 +1,3 @@
 #!/system/bin/sh
+/opt/sbin/dinitctl -u disable fan-hook || true
 /opt/sbin/dinitctl -u disable fan-control || true
